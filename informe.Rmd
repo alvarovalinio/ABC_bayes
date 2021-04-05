@@ -72,7 +72,7 @@ A continuación se presenta graficamente la evolución de la TFR en función de 
 
 
 ```{r}
-obs <- readr::read_csv(here::here("trabajo_final/datos","asfr_hutterites.csv"))
+obs <- readr::read_csv(here::here("Materiales/datos","asfr_hutterites.csv"))
 ```
 
 ```{r, fig.cap = 'Scatter plot de las tasas de fecundabilidad por edad en una población de Huteritas', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
@@ -91,8 +91,8 @@ ne <- 10
 N <- 520 
 
 
-res_dir <- file.path("resultados", paste0("ini_c_", ini_c), paste0("ne_", ne), paste0("N_", N))
-post_candidates <- readr::read_rds(here::here("trabajo_final/resultados/ini_c_2000/ne_10/N_520/evals", "evalued_points.rds"))
+res_dir <- file.path("Materiales/resultados", paste0("ini_c_", ini_c), paste0("ne_", ne), paste0("N_", N))
+post_candidates <- readr::read_rds(here::here("Materiales/resultados/ini_c_2000/ne_10/N_520/evals", "evalued_points.rds"))
 
 # Optimal combination of parameters
 min_mse <- post_candidates %>% as_tibble() %$% min(.$mse)
@@ -149,7 +149,7 @@ accepted <- post_candidates2[post_candidates2$mse < epsilon,]
 # Loop para cargar datos de carpetas
 
 for (i in 1:nrow(accepted)){
-  ruta <- paste0("resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100,"/fx.Rdata") 
+  ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100,"/fx.Rdata") 
   y_pred <- read_rds(ruta) %>% data.table()
   colnames(y_pred) <- c("age",paste0("fx_",i+100))
   setkey(y_pred,age)
@@ -206,7 +206,7 @@ colnames(edad) <- "age"
 
 # Loop para cargar datos de carpetas
 for (i in 1:520){
-      ruta <- paste0("resultados/ini_c_2000/ne_10/N_520/param_set_",i+100,"/fx.Rdata") 
+      ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",i+100,"/fx.Rdata") 
       y_pred <- read_rds(ruta) %>% data.table()
       colnames(y_pred) <- c("age",paste0("fx_",i+100))
       setkey(y_pred,age)
@@ -227,7 +227,7 @@ datos <- data.table(age=edad$age,
                     mediana=quantiles[3,])
 
 # Agregamos los valores observados
-obs <- readr::read_csv(here::here("trabajo_final/datos/","asfr_hutterites.csv"))
+obs <- readr::read_csv(here::here("Materiales/datos/","asfr_hutterites.csv"))
 datos$fx <- obs$fx
 ```
 
