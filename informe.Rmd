@@ -1,0 +1,293 @@
+---
+title: "Estudio de las Tasas específicas de fecundabilidad mediante técnicas de computo bayesiano aproximado"
+subtitle: "Taller de modelos computacionales con aplicaciones en demografía - UdelaR "
+author: "Alvaro Valiño - Lucia Coudet"
+date: "Abril de 2021"
+output: pdf_document
+header-includes:
+  \usepackage{float}
+ \floatplacement{figure}{H}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE, comment = FALSE)
+library(magrittr)
+library(data.table)
+library(tidyverse)
+library(here)
+library(xtable)
+```
+
+#Abstract
+
+#Introducción
+
+El objetivo de éste trabajo es representar la incertidumbre en la estimación de las *tasas específicas de fecundidad por edad (TFR)* provenientes de una población de  Huteritas [^1], considerando la incertidumbre sobre los parámetros que controlan el descenso en el riesgo de concebir con la edad: $\alpha$ y $\kappa$.
+
+ [^1]:<https://es.wikipedia.org/wiki/Huteritas>
+ 
+- $\alpha$ edad en la que decae la fecundabilidad. 
+- $\kappa$ tasa para ese $\alpha$.
+
+
+#Marco metodológico
+
+Con el fin de modelar las TFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert). Sin embargo, a la hora de estimar los parámetros del modelo, debido a la incapacidad de estimar la función de verosimilitud se procedió a trabajar con métodos aproximados (Likelihood free). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada *Bayesian ABC*. 
+
+A constinuación se presenta una breve descripción del algoritmo ABC:
+
+Sea $y_0$ dato observado, $p(\theta)$ distribución a priori, $p(y|\theta)$ la posterior, una medida de discrepancia (distancia euclídea), un valor de tolerancia $\epsilon$
+
+Pasos:
+1. Simular $\theta^* ~ P(\theta)$
+2. Simular $P(y|\theta*)$ 
+   if $y_{sim} = y_0$ (discrete data) $\Delta (\eta_0, \eta_{sim})$ < $\epsilon$ (continuos data) $\rightarrow$ $\theta^*$ forma parte de la posterior;
+   else descartamos $\theta^*$ 
+3. Repetir 1 y 2 hasta que se tenga un número suficiente de valores para $\theta$.
+   
+ 
+Debido al elevado costo computacional que implica obtener estimaciones a partir del modelo comfert, se procedió a trabajar con una versión adaptada del algoritmo *ABC*.
+
+Para ello, se ajusta un meta modelo que es utilizado como sustituto del modelo Comfert y a través de la *acquisition function* se procede a definir un subconjunto en el espacio paramétrico. Siendo los pertenecientes a éste subconjunto aquellos a ser evaluados como posibles candidatos de la distribución a posteriori $p(\theta|y)$.
+
+
+Una vez seleccionados los candidatos, se procedió a estimar la densidad de la predictiva posterior ($p(\tilde{y}|y)$), obteniendo así estimaciones de la distribucion de probabilidad a posteriori de la TFR para cada edad.
+
+Como estimación puntual se toma la estimación resultante al elegir el conjunto de parámetros que minimiza el error cuadrático medio (MSE):
+
+$$\text{MSE} = \frac{\sum_{i=1}^n (y_s -y_{obs})^2}{n}$$
+
+Dónde: 
+- $y_s$ son los valores simulados de las TFR para cada edad, utilizando *Comfert_abc*
+- $y_{obs}$ son los valores observados en la población de Huteritas de la TFR para cada edad
+- $n$ son la cantidad de edades consideradas.
+
+Por otro lado, con el fin de medir la incertidumbre en la estimación de la TFR se calculan os intervalos de credibilidad al 95% de la predictiva psoterior. 
+
+#Resultados
+
+Como fue mencionado en la introducción, los datos utilizados son observaciones de las tasas de fecundabilidad por edad en una población de Huteritas.
+
+A continuación se presenta graficamente la evolución de la TFR en función de la edad:
+
+
+```{r}
+obs <- readr::read_csv(here::here("trabajo_final/datos","asfr_hutterites.csv"))
+```
+
+```{r, fig.cap = 'Scatter plot de las tasas de fecundabilidad por edad en una población de Huteritas', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
+ggplot(obs) + geom_point(aes(x = age, y = fx), color = 'grey41') +
+      geom_line(aes(x = age, y = fx), color = 'grey41') +
+      theme(axis.title = element_text(face = 'bold')) +
+      labs(x = 'Edad', y = 'fx (TFR)') 
+```
+
+En la figura 2 se presenta el gráfico de la estimación puntual para cada TFR por edad según el criterio del MSE definido en la sección marco metodológico. Como podemos observar en el mismo, el modelo subestima las TFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.
+
+```{r}
+ini_c <- 2000
+n0 <- 100 
+ne <- 10
+N <- 520 
+
+
+res_dir <- file.path("resultados", paste0("ini_c_", ini_c), paste0("ne_", ne), paste0("N_", N))
+post_candidates <- readr::read_rds(here::here("trabajo_final/resultados/ini_c_2000/ne_10/N_520/evals", "evalued_points.rds"))
+
+# Optimal combination of parameters
+min_mse <- post_candidates %>% as_tibble() %$% min(.$mse)
+
+#busca el indice donde se da el minimo
+paramset <- which(post_candidates$mse == min_mse)[1] # results dir for min mse
+opt_res_dir <- file.path(res_dir, paste0("param_set_", n0+paramset))
+
+
+#lee las simulaciones obtenidas con las combinaciones de kappa y alpha que minimizan el error
+#SON LOS VALORES SIMULADOS DE LA TFR CON KAPPA Y ALPHA OPTIMOS (QUE MINIMIZAN EL MSE)
+sim <- readRDS(file.path(opt_res_dir, "fx.RData"))
+sim <- as_tibble(sim)
+
+# plot obs vs. sim de combinacion con menor distancia
+sim <- sim %>% mutate(tipo = 'simulado') 
+obs <- obs %>% mutate(tipo = 'observado')
+data <- sim %>% bind_rows(obs)
+
+```
+
+```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse', fig.pos="H"}
+ggplot(data) + 
+      geom_line(aes(x = age, y = fx, colour = tipo))  +
+      geom_point(aes(x = age, y = fx, colour = tipo)) +
+      theme(axis.title = element_text(face = 'bold',size = '12'),
+            plot.title = element_text(face = 'bold', size = 14, hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = 'bottom',
+            legend.title = element_text(face = 'bold'),
+            legend.background = element_rect(linetype = 1, size = 0.5, color = 1)) +
+      labs(x = 'Edad', y = 'TFR fx') +
+      scale_color_manual(values = c('grey41', 'orangered'), name = 'Datos')
+```
+
+No obstante, el gráfico anterior no permite visualizar la aleatoriedad en las TFR. 
+A continuación se presenta el gráfico de las estimaciones de las TFR por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar: 
+
+
+```{r}
+
+edad2 <- 10:55 %>% data.table()
+colnames(edad2) <- "age"
+
+# Agregamos id para mapear
+post_candidates2 <- post_candidates
+post_candidates2$id <- 1:nrow(post_candidates2)
+
+# definir distancia - valor que comprende el 10% de las combinaciones con menor distancia
+epsilon <- quantile(post_candidates2$mse,probs = seq(0, 1, 0.10))[2]
+accepted <- post_candidates2[post_candidates2$mse < epsilon,] 
+
+
+# Loop para cargar datos de carpetas
+
+for (i in 1:nrow(accepted)){
+  ruta <- paste0("resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100,"/fx.Rdata") 
+  y_pred <- read_rds(ruta) %>% data.table()
+  colnames(y_pred) <- c("age",paste0("fx_",i+100))
+  setkey(y_pred,age)
+  setkey(edad2,age)
+  edad2 <- edad2[y_pred,nomatch=0]
+}
+
+quantiles2 <- apply(edad2[,-1],1,function(y){
+  int_inf <- quantile(y,0.025)
+  int_sup <- quantile(y,0.975)
+  mediana <- quantile(y,0.5)
+  return(c(int_inf,int_sup,mediana))
+}) 
+
+datos2 <- data.table(age=edad2$age,int_inf=quantiles2[1,],int_sup=quantiles2[2,],mediana=quantiles2[3,])
+# Agregamos los valores del simulado
+datos2$fx <- obs$fx
+```
+
+
+```{r}
+#gráfico
+#seleccionando 4 - 6 indices al azar de la grilla de alphas y kappas
+set.seed(543210)
+aleat <- edad2 %>% select(c(1,sample(2:ncol(edad2),4)))
+```
+
+```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse', fig.pos="H"}
+
+aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() + 
+      geom_line(aes(x = age, y = value, colour = index))  +
+      geom_point(aes(x = age, y = value, colour = index)) +
+      theme(axis.title = element_text(face = 'bold',size = '12'),
+            plot.title = element_text(face = 'bold', size = 14, hjust = 0.5),
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = 'bottom',
+            legend.title = element_text(face = 'bold'),
+            legend.background = element_rect(linetype = 1, size = 0.5, color = 1)) +
+      labs(x = 'Edad', y = 'TFR fx') +
+      scale_color_manual(values = c('grey41', 'orangered', 'yellow', 'black'), name = 'Datos')
+```
+
+
+
+Ahora bien, para obtener una representación de la incertidumbre mencionada, se procedió a realizar un gráfico análogo a la figura 2 agregando los intervalos de credibilidad y la estimación de la mediana (percentil 0.5 de la estimación de la distribución predictiva posterior para cada edad).
+
+Estos intervalos fueron construídos mediante la estimación de la distribución predictiva posterior utilizando en primera instancia la distribución a posteriori de los parámetros $\alpha$y $\kappa$ estimada sin considerar ninguna función de pérdida.
+
+
+```{r datos}
+
+edad <- 10:55 %>% data.table()
+colnames(edad) <- "age"
+
+# Loop para cargar datos de carpetas
+for (i in 1:520){
+      ruta <- paste0("resultados/ini_c_2000/ne_10/N_520/param_set_",i+100,"/fx.Rdata") 
+      y_pred <- read_rds(ruta) %>% data.table()
+      colnames(y_pred) <- c("age",paste0("fx_",i+100))
+      setkey(y_pred,age)
+      setkey(edad,age)
+      edad <- edad[y_pred,nomatch=0]
+}
+
+quantiles <- apply(edad[,-1],1,function(y){
+      int_inf <- quantile(y,0.025)
+      int_sup <- quantile(y,0.975)
+      mediana <- quantile(y,0.5)
+      return(c(int_inf,int_sup,mediana))
+}) 
+
+datos <- data.table(age=edad$age,
+                    int_inf=quantiles[1,],
+                    int_sup=quantiles[2,],
+                    mediana=quantiles[3,])
+
+# Agregamos los valores observados
+obs <- readr::read_csv(here::here("trabajo_final/datos/","asfr_hutterites.csv"))
+datos$fx <- obs$fx
+```
+
+
+```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
+colors <- c("Simulado" = "red", "Observado" = "grey41")
+datos %>% ggplot(aes(x=age))+
+      geom_line(aes(y=mediana, color="Simulado")) +
+      geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
+      geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
+      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
+      scale_color_manual(values = colors) +
+      theme(axis.title = element_text(face = 'bold'),
+            legend.position = 'bottom',
+            legend.background = element_rect(linetype = 1, size = 0.5, color = 1))
+```
+
+
+Posteriormente, se procedió a computar el MSE en cada combinación de  $\alpha$ y $\kappa$  seleccionando como candidatos de valores pertenecientes a la estimación de la distribución a posteriori aquellos que tienen error menor o igual al percentil que acumula un 10% de la probabilidad de la distribución del error.
+
+
+```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
+colors <- c("Simulado" = "red", "Observado" = "grey41")
+datos2 %>% ggplot(aes(x=age))+
+      geom_line(aes(y=mediana, color="Simulado")) +
+      geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
+      geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
+      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
+      scale_color_manual(values = colors) +
+      theme(axis.title = element_text(face = 'bold'),
+            legend.position = 'bottom',
+            legend.background = element_rect(linetype = 1, size = 0.5, color = 1))
+```
+
+```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
+
+datos3 <- bind_rows(datos %>% mutate(tipo = 'Sin filtrar'), datos2%>% mutate(tipo = 'Filtrado'))
+
+names <- list(
+  'Sin filtrar'="Sin filtrar",
+  'Filtrado'="Filtrado según MSE")
+
+facet_labeller <- function(variable,value){
+  return(names[value])
+}
+
+
+colors <- c("Simulado" = "red", "Observado" = "grey41")
+datos3 %>% ggplot(aes(x=age))+
+      geom_line(aes(y=mediana, color="Simulado")) +
+      geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
+      geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
+      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
+      scale_color_manual(values = colors) +
+      theme(axis.title = element_text(face = 'bold'),
+            legend.position = 'bottom',
+            legend.background = element_rect(linetype = 1, size = 0.5, color = 1),
+            strip.text = element_text(face="bold")) +
+      facet_wrap(~tipo, labeller = facet_labeller)
+```
+
+
+
