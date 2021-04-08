@@ -16,13 +16,15 @@ library(data.table)
 library(tidyverse)
 library(here)
 library(xtable)
+
+source(here("script_aux", "funcion_int_post.R"))
 ```
 
-#Abstract
+#Abstrac
 
 #Introducción
 
-El objetivo de éste trabajo es representar la incertidumbre en la estimación de las *tasas específicas de fecundidad por edad (TFR)* provenientes de una población de  Huteritas [^1], considerando la incertidumbre sobre los parámetros que controlan el descenso en el riesgo de concebir con la edad: $\alpha$ y $\kappa$.
+El objetivo de éste trabajo es representar la incertidumbre en la estimación de las *tasas específicas de fecundidad por edad (ASFR)* provenientes de una población de  Huteritas [^1], considerando la incertidumbre sobre los parámetros que controlan el descenso en el riesgo de concebir con la edad: $\alpha$ y $\kappa$.
 
  [^1]:<https://es.wikipedia.org/wiki/Huteritas>
  
@@ -32,7 +34,21 @@ El objetivo de éste trabajo es representar la incertidumbre en la estimación d
 
 #Marco metodológico
 
-Con el fin de modelar las TFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert). Sin embargo, a la hora de estimar los parámetros del modelo, debido a la incapacidad de estimar la función de verosimilitud se procedió a trabajar con métodos aproximados (Likelihood free). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada *Bayesian ABC*. 
+En primer lugar, las tasas específicas de fecundidad se definen como 
+
+$$_nF_x[0,T] = \frac{_nB_x[0,T]}{_nL_x[0,T]}$$
+Dónde 
+
+- $_nB_x[0,T]$ es la cantidad de nacimientos de mujeres entre las edades x y x+n en el periodo de tiempo 0 a T.
+- $_nL_x[0,T]$ es la cantidad de mujeres entre el periodo de tiempo 0 y T. 
+
+Con el fin de modelar las ASFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert), el cual es una extensión del modelo de primer nacimiento que modela la frecuencia mensual de nacimientos después del casamiento. 
+
+Es importante destacar que uno de los supuestos base del modelo es que la concepción comienza inmediatamente luego del matrimonio.
+
+El modelo Comfert incluye periodos de no suceptibilidad de la madre luego del nacimiento. De este forma, los componentes principales son 1) Inicio $ln(U) \sim N(\mu, \sigma)$, 2) Heterogeneidad de la Tasa de fecundabilidad $\phi \sim \Gamma(shape, rate) \rightarrow h(x, \alpha, \kappa) = \frac{1}{1+e\lbrace{-\kappa*(x-\alpha) \rbrace}}$ y 3) Periodo de no-suceptibilidad.
+
+Sin embargo, a la hora de estimar los parámetros del modelo, debido a la incapacidad de estimar la función de verosimilitud se procedió a trabajar con métodos aproximados (Likelihood free). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada *Bayesian ABC*. 
 
 A constinuación se presenta una breve descripción del algoritmo ABC:
 
@@ -48,27 +64,26 @@ Pasos:
  
 Debido al elevado costo computacional que implica obtener estimaciones a partir del modelo comfert, se procedió a trabajar con una versión adaptada del algoritmo *ABC*.
 
-Para ello, se ajusta un meta modelo que es utilizado como sustituto del modelo Comfert y a través de la *acquisition function* se procede a definir un subconjunto en el espacio paramétrico. Siendo los pertenecientes a éste subconjunto aquellos a ser evaluados como posibles candidatos de la distribución a posteriori $p(\theta|y)$.
+Para ello, se ajusta un meta modelo (en particular un proceso gaussiano) que es utilizado como sustituto del modelo Comfert y a través de una función denominada *acquisition function* se procede a definir un subconjunto en el espacio paramétrico. Siendo los pertenecientes a éste subconjunto aquellos a ser evaluados como posibles candidatos de la distribución a posteriori $p(\theta|y)$.
 
-
-Una vez seleccionados los candidatos, se procedió a estimar la densidad de la predictiva posterior ($p(\tilde{y}|y)$), obteniendo así estimaciones de la distribucion de probabilidad a posteriori de la TFR para cada edad.
+Una vez seleccionados los candidatos, se procedió a estimar la densidad de la predictiva posterior ($p(\tilde{y}|y)$), obteniendo así estimaciones de la distribucion de probabilidad a posteriori de la ASFR para cada edad.
 
 Como estimación puntual se toma la estimación resultante al elegir el conjunto de parámetros que minimiza el error cuadrático medio (MSE):
 
 $$\text{MSE} = \frac{\sum_{i=1}^n (y_s -y_{obs})^2}{n}$$
 
 Dónde: 
-- $y_s$ son los valores simulados de las TFR para cada edad, utilizando *Comfert_abc*
-- $y_{obs}$ son los valores observados en la población de Huteritas de la TFR para cada edad
+- $y_s$ son los valores simulados de las ASFR para cada edad, utilizando *Comfert_abc*
+- $y_{obs}$ son los valores observados en la población de Huteritas de la ASFR para cada edad
 - $n$ son la cantidad de edades consideradas.
 
-Por otro lado, con el fin de medir la incertidumbre en la estimación de la TFR se calculan os intervalos de credibilidad al 95% de la predictiva psoterior. 
+Por otro lado, con el fin de medir la incertidumbre en la estimación de la ASFR se calculan os intervalos de credibilidad al 95% de la predictiva psoterior. 
 
 #Resultados
 
 Como fue mencionado en la introducción, los datos utilizados son observaciones de las tasas de fecundabilidad por edad en una población de Huteritas.
 
-A continuación se presenta graficamente la evolución de la TFR en función de la edad:
+A continuación se presenta graficamente la evolución de la ASFR en función de la edad:
 
 
 ```{r}
@@ -79,10 +94,10 @@ obs <- readr::read_csv(here::here("Materiales/datos","asfr_hutterites.csv"))
 ggplot(obs) + geom_point(aes(x = age, y = fx), color = 'grey41') +
       geom_line(aes(x = age, y = fx), color = 'grey41') +
       theme(axis.title = element_text(face = 'bold')) +
-      labs(x = 'Edad', y = 'fx (TFR)') 
+      labs(x = 'Edad', y = 'fx (ASFR)') 
 ```
 
-En la figura 2 se presenta el gráfico de la estimación puntual para cada TFR por edad según el criterio del MSE definido en la sección marco metodológico. Como podemos observar en el mismo, el modelo subestima las TFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.
+En la figura 2 se presenta el gráfico de la estimación puntual para cada ASFR por edad según el criterio del MSE definido en la sección marco metodológico. Como podemos observar en el mismo, el modelo subestima las ASFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.
 
 ```{r}
 ini_c <- 2000
@@ -103,7 +118,7 @@ opt_res_dir <- file.path(res_dir, paste0("param_set_", n0+paramset))
 
 
 #lee las simulaciones obtenidas con las combinaciones de kappa y alpha que minimizan el error
-#SON LOS VALORES SIMULADOS DE LA TFR CON KAPPA Y ALPHA OPTIMOS (QUE MINIMIZAN EL MSE)
+#SON LOS VALORES SIMULADOS DE LA ASFR CON KAPPA Y ALPHA OPTIMOS (QUE MINIMIZAN EL MSE)
 sim <- readRDS(file.path(opt_res_dir, "fx.RData"))
 sim <- as_tibble(sim)
 
@@ -124,16 +139,17 @@ ggplot(data) +
             legend.position = 'bottom',
             legend.title = element_text(face = 'bold'),
             legend.background = element_rect(linetype = 1, size = 0.5, color = 1)) +
-      labs(x = 'Edad', y = 'TFR fx') +
+      labs(x = 'Edad', y = 'ASFR fx') +
       scale_color_manual(values = c('grey41', 'orangered'), name = 'Datos')
 ```
 
-No obstante, el gráfico anterior no permite visualizar la aleatoriedad en las TFR. 
-A continuación se presenta el gráfico de las estimaciones de las TFR por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar: 
+No obstante, el gráfico anterior no permite visualizar la aleatoriedad en las ASFR. 
+A continuación se presenta el gráfico de las estimaciones de las ASFR por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar: 
 
 
-```{r}
 
+
+```{r epsilon}
 edad2 <- 10:55 %>% data.table()
 colnames(edad2) <- "age"
 
@@ -167,6 +183,9 @@ quantiles2 <- apply(edad2[,-1],1,function(y){
 datos2 <- data.table(age=edad2$age,int_inf=quantiles2[1,],int_sup=quantiles2[2,],mediana=quantiles2[3,])
 # Agregamos los valores del simulado
 datos2$fx <- obs$fx
+
+datos3 <- int_post(11)
+datos4 <- int_post(16)
 ```
 
 
@@ -177,7 +196,7 @@ set.seed(543210)
 aleat <- edad2 %>% select(c(1,sample(2:ncol(edad2),4)))
 ```
 
-```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse', fig.pos="H"}
+```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones para valores del MSE seleccionados aleatoriamente', fig.pos="H"}
 
 aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() + 
       geom_line(aes(x = age, y = value, colour = index))  +
@@ -188,7 +207,7 @@ aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() +
             legend.position = 'bottom',
             legend.title = element_text(face = 'bold'),
             legend.background = element_rect(linetype = 1, size = 0.5, color = 1)) +
-      labs(x = 'Edad', y = 'TFR fx') +
+      labs(x = 'Edad', y = 'ASFR fx') +
       scale_color_manual(values = c('grey41', 'orangered', 'yellow', 'black'), name = 'Datos')
 ```
 
@@ -231,44 +250,20 @@ obs <- readr::read_csv(here::here("Materiales/datos/","asfr_hutterites.csv"))
 datos$fx <- obs$fx
 ```
 
-
-```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
-colors <- c("Simulado" = "red", "Observado" = "grey41")
-datos %>% ggplot(aes(x=age))+
-      geom_line(aes(y=mediana, color="Simulado")) +
-      geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
-      geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
-      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
-      scale_color_manual(values = colors) +
-      theme(axis.title = element_text(face = 'bold'),
-            legend.position = 'bottom',
-            legend.background = element_rect(linetype = 1, size = 0.5, color = 1))
-```
+RELEER
+Posteriormente, con el fin d observar como varía la aplitud de los intervalos de credibilid, se procedió a computar el MSE en cada combinación de  $\alpha$ y $\kappa$  seleccionando como candidatos de valores pertenecientes a la estimación de la distribución a posteriori aquellos que tienen error menor o igual al percentil que acumula un 10%, 50%, y 75% de la probabilidad de la distribución del error respectivamente.
 
 
-Posteriormente, se procedió a computar el MSE en cada combinación de  $\alpha$ y $\kappa$  seleccionando como candidatos de valores pertenecientes a la estimación de la distribución a posteriori aquellos que tienen error menor o igual al percentil que acumula un 10% de la probabilidad de la distribución del error.
+```{r, fig.cap='Gráfico de lineas de la ASFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
 
-
-```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
-colors <- c("Simulado" = "red", "Observado" = "grey41")
-datos2 %>% ggplot(aes(x=age))+
-      geom_line(aes(y=mediana, color="Simulado")) +
-      geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
-      geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
-      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
-      scale_color_manual(values = colors) +
-      theme(axis.title = element_text(face = 'bold'),
-            legend.position = 'bottom',
-            legend.background = element_rect(linetype = 1, size = 0.5, color = 1))
-```
-
-```{r, fig.cap='Gráfico de lineas de la TFR por edad, valores observados, mediana e intervalo de confianza al 95%', fig.pos="H"}
-
-datos3 <- bind_rows(datos %>% mutate(tipo = 'Sin filtrar'), datos2%>% mutate(tipo = 'Filtrado'))
+datostot <- bind_rows(datos %>% mutate(tipo = 'Sin filtrar'), datos2 %>% mutate(tipo = 'Percentil 10\%'),
+                      datos3 %>% mutate(tipo = 'Percentil 50\%'), datos4 %>% mutate(tipo = 'Percentil 75\%'))
 
 names <- list(
   'Sin filtrar'="Sin filtrar",
-  'Filtrado'="Filtrado según MSE")
+  'Percentil 10'="Percentil 10%",
+  'Percentil 50'="Percentil 50%",
+  'Percentil 75' = "Percentil 75%")
 
 facet_labeller <- function(variable,value){
   return(names[value])
@@ -276,11 +271,11 @@ facet_labeller <- function(variable,value){
 
 
 colors <- c("Simulado" = "red", "Observado" = "grey41")
-datos3 %>% ggplot(aes(x=age))+
+datostot %>% ggplot(aes(x=age))+
       geom_line(aes(y=mediana, color="Simulado")) +
       geom_ribbon(aes(ymin=int_inf,ymax=int_sup),alpha=0.2, fill = 'red') + 
       geom_line(aes(y=fx, color="Observado"), linetype = 'dashed') +
-      labs(x = 'Edad', y = 'fx (TFR)', color = 'TFR por edad') +
+      labs(x = 'Edad', y = 'fx (ASFR)', color = 'ASFR por edad') +
       scale_color_manual(values = colors) +
       theme(axis.title = element_text(face = 'bold'),
             legend.position = 'bottom',
@@ -289,5 +284,10 @@ datos3 %>% ggplot(aes(x=age))+
       facet_wrap(~tipo, labeller = facet_labeller)
 ```
 
+
+
+# Futuros trabajos
+
+Para futuras investigaciones habría que considerar la utilización de métodos anticonceptivos así como también generar salida de unidades por fallecimiento y los fenómenos asociados a las migraciones.
 
 
