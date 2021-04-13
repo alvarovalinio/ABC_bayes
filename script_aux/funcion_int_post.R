@@ -73,16 +73,9 @@ int_post <- function(e=2){
   
   
   # Agregamos los valores del simulado
+  obs <- readr::read_csv(here::here("Materiales/datos","asfr_hutterites.csv"))
   
-  min_mse <- post_candidates[order(post_candidates$mse),]$mse[1] 
-  paramset <- which(post_candidates$mse == min_mse)[1] # results dir for min mse
-  
-  opt_res_dir <- file.path(res_dir, paste0("param_set_", n0+paramset))
-  
-  sim <- readRDS(file.path("Materiales",opt_res_dir, "fx.RData")) %>% data.table()
-  
-  
-  datos$fx <- sim$fx
+  datos$fx <- obs$fx
   
   
   
