@@ -1,9 +1,11 @@
 ---
-title: "Estudio de las Tasas específicas de fecundabilidad mediante técnicas de computo bayesiano aproximado"
-subtitle: "Taller de modelos computacionales con aplicaciones en demografía - UdelaR "
+title: "Estudio de las Tasas específicas de fecundabilidad mediante técnicas ABC"
+subtitle: "Taller de modelos computacionales con aplicaciones en demografía"
 author: "Alvaro Valiño - Lucia Coudet"
 date: "Abril de 2021"
 output: pdf_document
+documentclass: article
+fontsize: 10pt
 header-includes:
   \usepackage{float}
  \floatplacement{figure}{H}
@@ -16,13 +18,29 @@ library(data.table)
 library(tidyverse)
 library(here)
 library(xtable)
+library(knitr)
 
 source(here("script_aux", "funcion_int_post.R"))
 ```
 
-#Abstrac
 
+```{r fig.align='center',echo=FALSE} 
+include_graphics("Udelar.png") 
+```
 
+\newpage
+
+#Resumen ejecutivo
+
+El siguiente trabajo consiste en la presentación de una metodología para modelar las tasas de fecundidad por edad en una población de Huteritas. En primera instancia se utilizó un modelo basado en agentes denominado *Comfert*. Luego, con el fin de obtener estimaciones de los parámetros del mismo, se utilizó un enfoque bayesiano. En particular, el enfoque *ABC* el cual no necesita una expresión análitica de la función de verosimilitud.
+
+A su vez, debido al elevado costo computacional que esto implica, se utilizó un metamodelo, en particular un proceso gaussiano.
+
+Luego, se consideró de interés obtener una medida de incertidumbre en cuanto a las estimaciones de los parámetros y por consecuente de los valores simulados. Para ello se realizó primero una estimación puntual considerada óptima y luego se construyeron diferentes intervalos de credibilidad. Si bien todos al 95% de credibilidad, su estimación varía en función de los niveles de tolerancia considerados en el algoritmo ABC.
+
+Como principal resultado se observó una relación positiva entre el nivel de incertidumbre y el incremento en la tolerancia del algoritmo. Asimismo, se observó que el modelo no realiza un ajuste del todo adecuado para edades tempranas. Por último, se presentan pasos a seguir para futuras investigaciones. 
+
+Palabras claves: fecundidad, fertilidad, proceso reproductivo, simulación, enfoque bayesiano, máxima verosimilitud aproximada.
 
 #Introducción
 
@@ -40,6 +58,7 @@ Con el fin de lograr la reproducibilidad de los resultados obtenidos, se conside
 
 [^2]:<https://github.com/alvarovalinio/ABC_bayes>
 
+Se destaca que los resultados obtenidos fueron a través del lenguaje y entorno de programación para análisis estadístico y gráfico, *R*.
 
 #Marco metodológico
 
@@ -49,11 +68,11 @@ $$_nF_x[0,T] = \frac{_nB_x[0,T]}{_nL_x[0,T]}$$
 Dónde 
 
 - $_nB_x[0,T]$ es la cantidad de nacimientos de mujeres entre las edades x y x+n en el periodo de tiempo 0 a T.
-- $_nL_x[0,T]$ es la cantidad de mujeres entre el periodo de tiempo 0 y T. 
+- $_nL_x[0,T]$ es la cantidad de mujeres entre el periodo de tiempo 0 a T. 
 
-Con el fin de modelar las ASFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert), el cual es una extensión del modelo de primer nacimiento que modela la frecuencia mensual de nacimientos después del casamiento. 
+Con el fin de modelar las ASFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert), el cual es una extensión del modelo de primer nacimiento. Dónde éste modela la frecuencia mensual de nacimientos después del casamiento. 
 
-Es importante destacar que uno de los supuestos base del modelo es que las mujeres están expuestas al riesgo de concebir inmediatamente luego del matrimonio. A su vez, se asume la no utilización de ningún tipo de métodos anticonceptivo.
+Es importante destacar que uno de los supuestos base del modelo es que las mujeres están expuestas al riesgo de concebir inmediatamente luego del matrimonio. A su vez, se asume la no utilización de ningún tipo de métodos anticonceptivos.
 
 Por otro lado, el modelo Comfert incluye periodos de no suceptibilidad de la madre luego del nacimiento. De este forma, los componentes principales son:
 
@@ -297,25 +316,42 @@ datostot %>% ggplot(aes(x=age))+
       facet_wrap(~tipo, labeller = facet_labeller)
 ```
 
-# Conclusiones y futuros trabajos
+# Conclusiones
 
-El modelo construido nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundabilidad por edad. Esto último en función de la parametrización seleccionada.
+
+Si bien el modelo Comfert nos permite obtener estimaciones para las tasas de fecundabilidad por edad, el enfoque enfoque bayesiano implementado (*ABC Bayes*) nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundabilidad por edad. Esto último en función de la parametrización seleccionada.
 
 Como podemos observar, el modelo no presenta un ajuste adecuado en algunas edades, en particular para edades tempranas (menos a 20 años de edad).
 
-Si bien para valores elevados de epsilon el modelo logra captar el ajuste en las edades avanzadas, el problema persiste en todos los casos para las edades tempranas.
-
-Una posible explicación está en que el modelo considera como parámeros la edad en la que decae la fecundabilidad y la tasa para dicha edad.
+Si bien para valores elevados de epsilon el modelo parece lograr un ajuste satisfactorio en las edades avanzadas, el problema persiste en todos los casos para las edades tempranas. Una posible explicación está en que el modelo considera como parámeros la edad en la que decae la fecundabilidad y la tasa para dicha edad, sin considerar algún punto de inflexión para edades tempranas. Esto puede estar vinculado al supuesto de que la concepción comienza a partir del matrimonio o también a la modelización seleccionada para el tiempo de espera.
 
 Por otra parte, las estimaciones sobre la ASFR dependen del valor de epsilon seleccionado. Para valores de epsilon pequeños (en particular percentil 10%) existen valores observados que quedan por fuera del intervalo de credibilidad al 95%. 
 
 
+# Futuros trabajos
 
-Este resultado se encuentra en concordancia con lo observado por ... en cuanto al trade off entre precisión y costo computacional. En 
+Para futuras investigaciones se considera de interés incorporar al modelo la salida de unidades por fallecimiento y los fenómenos asociados a las migraciones.
+
+Adicionalmente, como extensión del modelo a poblaciones más avanzadas en la trancisión demográfica incluir una parametrización que considere la aleatoriedad proveniente de la utilización de métodos anticonceptivos y de la planificación o no del embarazo.
+
+En lo que respecta a la metodología utilizada, existen por lo menos dos formas de mejorar el enfoque utilizado. 
+
+En primer lugar, con respecto al elevado costo computacional inherente al modelo uno de los algaritmos más utilizados para reducirlo es el algoritmo denominado *ABC regression adjustment* (Beaumont et al., 2002). La idea principal de dicho algoritmo es correr un ABC estándar y considerar un márgen de error amplio con el fin de ajustar la muestra obtenida mediante una regresión. 
+
+En segundo lugar, la obtención de los candidatos para la distribución a posteriori en función de una indicatriz implica una pérdida de información. Esto en el sentido que no permite cuantificar la distancia relativa entre el punto observado y simulado. Como posible alternativa se considera apropiado sustituir la función indicatriz por una función kernel.
+
+
+# Biblografía
+ 
+- Overview of Approximate Bayesian Computation S. A. Sisson Y. Fan and M. A. Beaumonty February 28, 2018.
+- A review of Approximate Bayesian Computation methods via density estimation: inference for simulator-models Clara Grazian and Yanan Fan, September 2019.
+- R Core Team (2020). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+- Demographic Models of the Reproductive Process:Past, Interlude, and Future. Daniel Ciganda, Nicolas Todd.
+- Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43), 1686, https://doi.org/10.21105/joss.01686.
+- Kirill Müller (2017). here: A Simpler Way to Find Your Files. R package version 0.1. https://CRAN.R-project.org/package=here.
+- Matt Dowle and Arun Srinivasan (2020). data.table: Extension of `data.frame`. R package version 1.13.0. https://CRAN.R-project.org/package=data.table.
 
 
 
-
-Para futuras investigaciones er que considerar la utilización de métodos anticonceptivos así como también generar salida de unidades por fallecimiento y los fenómenos asociados a las migraciones.
 
 
