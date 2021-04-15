@@ -1,5 +1,5 @@
 ---
-title: "Estudio de las Tasas específicas de fecundabilidad mediante técnicas ABC"
+title: "Estudio de las Tasas específicas de fecundidad mediante técnicas ABC"
 subtitle: "Taller de modelos computacionales con aplicaciones en demografía"
 author: "Alvaro Valiño - Lucia Coudet"
 date: "Abril de 2021"
@@ -50,7 +50,7 @@ Para ello, se considera la incertidumbre sobre los parámetros que controlan el 
 
 [^1]:<https://es.wikipedia.org/wiki/Huteritas>
  
-- $\alpha$ edad en la que decae la fecundabilidad. 
+- $\alpha$ edad en la que decae la fecundidad. 
 - $\kappa$ tasa para ese $\alpha$.
 
 
@@ -77,7 +77,7 @@ Es importante destacar que uno de los supuestos base del modelo es que las mujer
 Por otro lado, el modelo Comfert incluye periodos de no suceptibilidad de la madre luego del nacimiento. De este forma, los componentes principales son:
 
 1. Inicio $ln(U) \sim N(\mu, \sigma)$, 
-2. Heterogeneidad de la Tasa de fecundabilidad $\phi \sim \Gamma(shape, rate) \rightarrow h(x, \alpha, \kappa) = \frac{1}{1+e\lbrace{-\kappa*(x-\alpha) \rbrace}}$ y 
+2. Heterogeneidad de la Tasa de fecundidad $\phi \sim \Gamma(shape, rate) \rightarrow h(x, \alpha, \kappa) = \frac{1}{1+e\lbrace{-\kappa*(x-\alpha) \rbrace}}$ y 
 3. Periodo de no-suceptibilidad.
 
 Sin embargo, a la hora de estimar los parámetros del modelo, debido a la incapacidad de estimar la función de verosimilitud se procedió a trabajar con métodos aproximados (Likelihood free). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada (*Bayesian ABC*). 
@@ -123,7 +123,7 @@ Por otro lado, con el fin de medir la incertidumbre en la estimación de la ASFR
 
 # Resultados
 
-Como fue mencionado en la introducción, los datos utilizados son observaciones de las tasas de fecundabilidad por edad en una población de Huteritas.
+Como fue mencionado en la introducción, los datos utilizados son observaciones de las tasas de fecundidad por edad en una población de Huteritas.
 
 A continuación se presenta gráficamente la evolución de la ASFR observada en función de la edad:
 
@@ -132,7 +132,7 @@ A continuación se presenta gráficamente la evolución de la ASFR observada en 
 obs <- readr::read_csv(here::here("Materiales/datos","asfr_hutterites.csv"))
 ```
 
-```{r, fig.cap = 'Scatter plot de las tasas de fecundabilidad por edad en una población de Huteritas', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
+```{r, fig.cap = 'Scatter plot de las tasas de fecundidad por edad en una población de Huteritas', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
 ggplot(obs) + geom_point(aes(x = age, y = fx), color = 'grey41') +
       geom_line(aes(x = age, y = fx), color = 'grey41') +
       theme(axis.title = element_text(face = 'bold')) +
@@ -172,7 +172,7 @@ data <- sim %>% bind_rows(obs)
 ```
 
 
-```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse. Se observa que el modelo subestima las ASFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.', fig.pos="H"}
+```{r, fig.cap = 'Tasa de fecundidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse. Se observa que el modelo subestima las ASFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.', fig.pos="H"}
 ggplot(data) + 
       geom_line(aes(x = age, y = fx, colour = tipo))  +
       geom_point(aes(x = age, y = fx, colour = tipo)) +
@@ -186,10 +186,8 @@ ggplot(data) +
       scale_color_manual(values = c('grey41', 'orangered'), name = 'Datos')
 ```
 
-
-
 Es importante destacar que el gráfico anterior fue construido a partir de una sola realización del proceso.
-Por lo tanto, el gráfico anterior no permite visualizar la aleatoriedad en las ASFR. 
+Por lo tanto, no permite visualizar la aleatoriedad en las ASFR. 
 
 Con el fin de obtener una primera noción de dicha aleatoriedad, a continuación se presenta el gráfico de las estimaciones de las ASFR por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar: 
 
@@ -240,7 +238,7 @@ set.seed(543210)
 aleat <- edad2 %>% select(c(1,sample(2:ncol(edad2),4)))
 ```
 
-```{r, fig.cap = 'Tasa de fecundabilidad por edad observada en una población de Huteritas y estimaciones para valores del MSE seleccionados aleatoriamente', fig.pos="H"}
+```{r, fig.cap = 'Tasa de fecundidad por edad observada en una población de Huteritas y estimaciones para valores del MSE seleccionados aleatoriamente', fig.pos="H"}
 
 aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() + 
       geom_line(aes(x = age, y = value, colour = index))  +
@@ -328,11 +326,11 @@ datostot %>% ggplot(aes(x=age))+
 # Conclusiones
 
 
-Si bien el modelo Comfert nos permite obtener estimaciones para las tasas de fecundabilidad por edad, el enfoque bayesiano implementado (*ABC Bayes*) nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundabilidad por edad. Esto último en función de la parametrización seleccionada.
+Si bien el modelo Comfert nos permite obtener estimaciones para las tasas de fecundidad por edad, el enfoque bayesiano implementado (*ABC Bayes*) nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundidad por edad. Esto último en función de la parametrización seleccionada.
 
 Como podemos observar, el modelo no presenta un ajuste adecuado en algunas edades, en particular para edades tempranas (menos de 20 años).
 
-Si bien para valores elevados de épsilon el modelo parece lograr un ajuste satisfactorio en las edades avanzadas, el problema persiste en todos los casos para las edades tempranas. Una posible explicación está en que el modelo considera como parámetros la edad en la que decae la fecundabilidad y la tasa para dicha edad, sin considerar algún punto de inflexión para edades tempranas. Esto puede estar vinculado al supuesto de que la concepción comienza a partir del matrimonio o también a la modelización seleccionada para el tiempo de espera.
+Si bien para valores elevados de épsilon el modelo parece lograr un ajuste satisfactorio en las edades avanzadas, el problema persiste en todos los casos para las edades tempranas. Una posible explicación está en que el modelo considera como parámetros la edad en la que decae la fecundidad y la tasa para dicha edad, sin considerar algún punto de inflexión para edades tempranas. Esto puede estar vinculado al supuesto de que la concepción comienza a partir del matrimonio o también a la modelización seleccionada para el tiempo de espera.
 
 Por otra parte, las estimaciones sobre la ASFR dependen del valor de épsilon seleccionado. Para valores de épsilon pequeños (en particular percentil 10%) existen valores observados que quedan por fuera del intervalo de credibilidad al 95%.
 
