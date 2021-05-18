@@ -32,67 +32,74 @@ include_graphics("Udelar.png")
 
 # Resumen ejecutivo
 
-El siguiente trabajo consiste en la presentación de una metodología para modelar las tasas de fecundidad por edad en una población de Huteritas. En primera instancia se utilizó un modelo basado en agentes denominado *Comfert*. Luego, con el fin de obtener estimaciones de los parámetros de este, se utilizó un enfoque bayesiano. En particular, el enfoque *ABC* el cual no necesita una expresión analítica de la función de verosimilitud.
+En este trabajo se presenta un estudio de la incertidumbre en la predicción de un modelo demográfico que simula las tasas específicas de fecundidad por edad (\textit{ASFR}) para una población en la cual no existe control sobre los nacimientos.
+\\
+El modelo se estima mediante técnicas de Computación Bayesiana Aproximada (\textit{ABC}) sobre datos de una comunidad religiosa conocida por su rechazo de los métodos anticonceptivos. En particular, se considera el efecto de la tolerancia utilizada para aceptar valores de los parámetros en la incertidumbre resultante en la estimación. 
 
-A su vez, debido al elevado costo computacional que esto implica, se utilizó un metamodelo, en particular un proceso gaussiano.
+Para ello, se realizó primero una estimación puntual considerada óptima como aquella que minimiza el Error Cuadrático Medio (\textit{ECM}) y luego se construyeron diferentes intervalos de credibilidad. Si bien todos se encuentran construidos al 95\% de credibilidad, la incertidumbre varía notablemente en función de los niveles de tolerancia considerados. 
 
-Luego, se consideró de interés obtener una medida de incertidumbre en cuanto a las estimaciones de los parámetros y por consecuente de los valores simulados. Para ello se realizó primero una estimación puntual considerada óptima y luego se construyeron diferentes intervalos de credibilidad. Si bien todos se encuentran construidos al 95% de credibilidad, su estimación varía en función de los niveles de tolerancia considerados en el algoritmo ABC.
-
-Como principal resultado se observó una relación positiva entre el nivel de incertidumbre y el incremento en la tolerancia del algoritmo. Asimismo, se observó que el modelo no realiza un ajuste del todo adecuado para edades tempranas. Por último, se presentan pasos a seguir para futuras investigaciones. 
-
-Palabras claves: fecundidad, fertilidad, proceso reproductivo, simulación, enfoque bayesiano, máxima verosimilitud aproximada.
+Como principal resultado es posible mencionar que se observó una relación positiva entre el nivel de incertidumbre y el incremento en la tolerancia del algoritmo. Por último, se presentan pasos a seguir para futuras investigaciones.
 
 # Introducción
 
-El objetivo de éste trabajo es representar la incertidumbre en la estimación de las *tasas específicas de fecundidad por edad (ASFR)* provenientes de una población de Huteritas [^1]. 
+El objetivo de éste trabajo es representar la incertidumbre en la estimación de las
+tasas específicas de fecundidad por edad (\textit{ASFR}) provenientes de una población en la que no existe control sobre los nacimientos. Es decir, en régimen de fecundidad natural. 
+Para ello, se considera la incertidumbre sobre los parámetros que controlan el
+descenso en el riesgo de concebir con la edad: $\alpha$ y $\kappa$.
 
-Para ello, se considera la incertidumbre sobre los parámetros que controlan el descenso en el riesgo de concebir con la edad: $\alpha$ y $\kappa$.
+\begin{itemize}
+\item $\alpha$ edad en la que decae la fecundidad
+\item $\kappa$ tasa para dicho $\alpha$
+\end{itemize}
 
-[^1]:<https://es.wikipedia.org/wiki/Huteritas>
- 
-- $\alpha$ edad en la que decae la fecundidad. 
-- $\kappa$ tasa para ese $\alpha$.
+Con el fin de lograr la reproducibilidad de los resultados obtenidos, se consideró
+apropiado utilizar un repositorio remoto público. \footnote{\url{https://github.com/alvarovalinio/ABC_bayes}}.
 
-
-Con el fin de lograr la reproducibilidad de los resultados obtenidos, se consideró apropiado utilizar un repositorio remoto público.[^2]
-
-[^2]:<https://github.com/alvarovalinio/ABC_bayes>
-
-Se destaca que los resultados obtenidos fueron a través del lenguaje y entorno de programación para análisis estadístico y gráfico, *R*.
+Se destaca que los resultados obtenidos fueron a través del lenguaje y entorno
+de programación para análisis estadístico y gráfico, R.
 
 # Marco metodológico
 
-En primer lugar, las tasas específicas de fecundidad se definen como 
+En primer lugar, las tasas específicas de fecundidad se definen como:
 
 $$_nF_x[0,T] = \frac{_nB_x[0,T]}{_nL_x[0,T]}$$
+
 Dónde 
+\begin{itemize}
+\item $_nB_x[0,T]$ es la cantidad de nacimientos de mujeres entre las edades x y x+n en el periodo de tiempo 0 a T.
+\item $_nL_x[0,T]$ es la cantidad de mujeres entre el periodo de tiempo 0 a T. 
+\end{itemize}
 
-- $_nB_x[0,T]$ es la cantidad de nacimientos de mujeres entre las edades x y x+n en el periodo de tiempo 0 a T.
-- $_nL_x[0,T]$ es la cantidad de mujeres entre el periodo de tiempo 0 a T. 
+Con el fin de modelar las \textit{ASFR}, se utilizó el modelo \textit{Comfert}, un modelo computacional a nivel micro, que representa las trayectorias reproductivas de una cohorte de mujeres en un contexto de fecunidad "natural", es decir, en ausencia de control de los nacimientos.
 
-Con el fin de modelar las ASFR, se utilizó el modelo denominado *Trayectorias reproductivas completas* (Comfert), el cual es una extensión del modelo de primer nacimiento. Dónde éste modela la frecuencia mensual de nacimientos después del casamiento. 
+Es importante destacar que uno de los supuestos base del modelo es que las mujeres están expuestas al riesgo de concebir inmediatamente después del inicio de una unión con cohabitación. De esta forma, la formación de la unión marca el inicio del proceso reproductivo. El tiempo de espera a este evento se modela de la siguiente manera: 
+$$ln(U) \sim N(\mu, \sigma)$$
 
-Es importante destacar que uno de los supuestos base del modelo es que las mujeres están expuestas al riesgo de concebir inmediatamente luego del matrimonio. A su vez, se asume la no utilización de ningún tipo de métodos anticonceptivos.
+El modelo también considera la heterogeneidad con respecto a la capacidad de concebir tanto entre mujeres como a través de tiempo. Éste último, incorporando al análisis el declive en la capacidad biológica de concebir debido al efecto del paso del tiempo. La heterogeneidad en la tasa de fecundidad se modela entonces como: 
+$$\phi \sim \Gamma(shape, rate)$$
+A su vez, como se mencionó anteriormente, se asume un régimen de fecundidad natural, el cual implica la no utilización de ningún tipo de métodos anticonceptivos. Por otra parte, el modelo \textit{Comfert} incluye periodos de no suceptibilidad de la madre luego del nacimiento.
 
-Por otro lado, el modelo Comfert incluye periodos de no suceptibilidad de la madre luego del nacimiento. De este forma, los componentes principales son:
+De este forma, los componentes principales del modelo son:
 
-1. Inicio $ln(U) \sim N(\mu, \sigma)$, 
-2. Heterogeneidad de la Tasa de fecundidad $\phi \sim \Gamma(shape, rate) \rightarrow h(x, \alpha, \kappa) = \frac{1}{1+e\lbrace{-\kappa*(x-\alpha) \rbrace}}$ y 
-3. Periodo de no-suceptibilidad.
+\begin{enumerate}
+\item Inicio $ln(U) \sim N(\mu, \sigma)$, 
+\item Heterogeneidad de la Tasa de fecundidad $\phi \sim \Gamma(shape, rate) \rightarrow h(x, \alpha, \kappa) = \frac{1}{1+e\lbrace{-\kappa*(x-\alpha) \rbrace}}$ y 
+\item Periodo de no-suceptibilidad
+\end{enumerate}
 
-Sin embargo, a la hora de estimar los parámetros del modelo, debido a la incapacidad de estimar la función de verosimilitud se procedió a trabajar con métodos aproximados (Likelihood free). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada (*Bayesian ABC*). 
+Sin embargo, a la hora de estimar los parámetros y debido a la incapacidad de estimar la función de verosimilitud, se procedió a trabajar con métodos de estimación que no dependen de dicha función  (\textit{Likelihood free}). En particular desde un enfoque bayesiano, utilizando la Computación bayesiana aproximada (\textit{ABC}).
 
-A constinuación se presenta una breve descripción del algoritmo ABC:
+A continuación se presenta una breve descripción del algoritmo \textit{ABC}:
 
-Sean: 1) $y_0$ un dato observado, 2) $p(\theta)$ distribución a priori, 3) $p(y|\theta)$ la posterior, 4) una medida de discrepancia (distancia euclídea), 4) un valor de tolerancia $\epsilon$
+Sean: 1) $y_0$ un dato observado, 2) $p(\theta)$ distribución a priori, 3) $p(y|\theta)$ la función de verosimilitud de $y|\theta$, 4) una medida de discrepancia ($\Delta$), y 5) un valor de tolerancia $\epsilon$. 
 
 Algoritmo:
 
-1. Simular $\theta^* ~ P(\theta)$
-
-2. Simular $P(y|\theta*)$ 
+\begin{enumerate}
+\item Obtener $\theta^*$ de $P(\theta)$
+\item Simular $P(y|\theta*)$ 
    
-   if $y_{sim} = y_0$ (discrete data) $\Delta (\eta_0, \eta_{sim})$ < $\epsilon$ (continuos data) 
+   if $y_{sim} = y_0$ (discrete data) $\Delta (\eta_0, \eta_{sim})$ $<$ $\epsilon$ (continuos data) 
    
    $\rightarrow$ $\theta^*$ forma parte de la posterior;
    
@@ -100,46 +107,47 @@ Algoritmo:
    
    descartamos $\theta^*$ 
 
-3. Repetir 1 y 2 hasta que se tenga un número suficiente de valores para $\theta$.
-   
+\item Repetir 1 y 2 hasta que se tenga un número suficiente de valores para $\theta$.    
+\end{enumerate}
  
-Debido al elevado costo computacional que implica obtener estimaciones a partir del modelo comfert, se procedió a trabajar con una versión adaptada del algoritmo *ABC*.
+Debido al elevado costo computacional que implica obtener estimaciones a partir del modelo \textit{Comfert}, se procedió a trabajar con una versión adaptada del algoritmo \textit{ABC}.
 
-Para ello, se ajusta un meta modelo (en particular un proceso gaussiano) que es utilizado como sustituto del modelo Comfert y a través de una función denominada *acquisition function*, la cual permite definir un subconjunto del espacio paramétrico. De esta manera, los puntos pertenecientes a dicho subconjunto son evaluados como posibles candidatos de la distribución a posteriori $p(\theta|y)$.
+Para ello, se ajusta un meta modelo (en particular un proceso gaussiano) que es utilizado como sustituto del modelo \textit{Comfert}. A su vez, con el fin de optimizar la búsqueda de combinaciones de parámetros pero sin condicionar sustantivamente los resultados (zonas sin explorar) se procedió a utilizar la función denominada \textit{acquisition function}. 
 
-Una vez seleccionados los candidatos, se procedió a estimar la densidad de la predictiva posterior ($p(\tilde{y}|y)$), obteniendo así para cada edad, estimaciones de la distribucion de probabilidad a posteriori de la ASFR.
+De esta manera, los puntos pertenecientes al subconjunto del espacio paramétrico obtenido son evaluados como posibles candidatos de la distribución a posteriori $p(\theta|y)$.
 
-Como estimación puntual se toma la estimación resultante de elegir el conjunto de parámetros que minimiza el error cuadrático medio (MSE):
+Una vez seleccionados los candidatos, se procedió a estimar la densidad de la predictiva posterior ($p(\tilde{y}|y)$), obteniendo así para cada edad, estimaciones de la distribución de probabilidad a posteriori de la \textit{ASFR}.
 
-$$\text{MSE} = \frac{\sum_{i=1}^n (y_s -y_{obs})^2}{n}$$
+Como estimación puntual se toma la estimación resultante de elegir el conjunto de parámetros que minimiza el error cuadrático medio (\textit{ECM}):
+
+$$\text{ECM} = \frac{\sum_{i=1}^n (y_s -y_{obs})^2}{n}$$
 
 Dónde: 
+\begin{itemize}
+\item $y_s$ son los valores simulados de las \textit{ASFR} para cada edad, utilizando la metodología \textit{ABC} (\textit{Comfert abc}).
+\item $y_{obs}$ son los valores de la \textit{ASFR} para cada edad observados en la población.
+\item $n$ son la cantidad de edades consideradas.
+\end{itemize}
 
-- $y_s$ son los valores simulados de las ASFR para cada edad, utilizando *Comfert_abc*
-- $y_{obs}$ son los valores observados en la población de Huteritas de la ASFR para cada edad
-- $n$ son la cantidad de edades consideradas.
-
-Por otro lado, con el fin de medir la incertidumbre en la estimación de la ASFR se calculan los intervalos de credibilidad al 95% de la predictiva posterior. 
+Por otro lado, con el fin de medir la incertidumbre en la estimación de las \textit{ASFR} se calculan los intervalos de credibilidad al 95\% de la predictiva posterior. 
 
 # Resultados
 
-Como fue mencionado en la introducción, los datos utilizados son observaciones de las tasas de fecundidad por edad en una población de Huteritas.
-
-A continuación se presenta gráficamente la evolución de la ASFR observada en función de la edad:
+A continuación se presentan gráficamente la evolución de las \textit{ASFR} observadas en función de la edad:
 
 
 ```{r}
 obs <- readr::read_csv(here::here("Materiales/datos","asfr_hutterites.csv"))
 ```
 
-```{r, fig.cap = 'Scatter plot de las tasas de fecundidad por edad en una población de Huteritas', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
+```{r, fig.cap = 'Gráfico de líneas de las tasas de fecundidad por edad en la población', out.width='80%', fig.align='center', warning=FALSE, message=FALSE, comment=FALSE, fig.pos="H"}
 ggplot(obs) + geom_point(aes(x = age, y = fx), color = 'grey41') +
       geom_line(aes(x = age, y = fx), color = 'grey41') +
       theme(axis.title = element_text(face = 'bold')) +
       labs(x = 'Edad', y = 'fx (ASFR)') 
 ```
 
-Por otra parte, en la figura 2 se presenta el gráfico de la estimación puntual para cada ASFR por edad según el criterio del MSE definido en la sección marco metodológico. 
+Por otra parte, en la figura 2 se presenta el gráfico de la estimación puntual para cada \textit{ASFR} según el criterio del \textit{ECM} definido en la sección marco metodológico. 
 
 ```{r}
 ini_c <- 2000
@@ -172,7 +180,9 @@ data <- sim %>% bind_rows(obs)
 ```
 
 
-```{r, fig.cap = 'Tasa de fecundidad por edad observada en una población de Huteritas y estimaciones según el criterio del mínimo mse. Se observa que el modelo subestima las ASFR para edades tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.', fig.pos="H"}
+
+```{r, fig.cap = 'Gráfico de líneas de las tasas de fecundidad por edad observada en la población y estimaciones según el criterio del mínimo ECM. Se observa que el modelo subestima las ASFR para edad tempranas (entre 10 y 20 años de edad). Por otro lado, el modelo tiende a sobrestimar para las edades entre 20 y 35 aproximadamente.',fig.pos="H"}
+
 ggplot(data) + 
       geom_line(aes(x = age, y = fx, colour = tipo))  +
       geom_point(aes(x = age, y = fx, colour = tipo)) +
@@ -186,10 +196,9 @@ ggplot(data) +
       scale_color_manual(values = c('grey41', 'orangered'), name = 'Datos')
 ```
 
-Es importante destacar que el gráfico anterior fue construido a partir de una sola realización del proceso.
-Por lo tanto, no permite visualizar la aleatoriedad en las ASFR. 
+No obstante, es importante destacar que el gráfico de la figura 2 fue construido a partir de una sola realización del proceso. Por lo tanto, no permite visualizar la aleatoriedad en las \textit{ASFR}.
 
-Con el fin de obtener una primera noción de dicha aleatoriedad, a continuación se presenta el gráfico de las estimaciones de las ASFR por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar: 
+Con el fin de obtener una primera noción de dicha aleatoriedad, se presenta en la figura 3 el gráfico de las estimaciones de las \textit{ASFR} por edad utilizando valores de $\alpha$ y $\kappa$ seleccionados al azar:
 
 ```{r epsilon}
 edad2 <- 10:55 %>% data.table()
@@ -238,7 +247,9 @@ set.seed(543210)
 aleat <- edad2 %>% select(c(1,sample(2:ncol(edad2),4)))
 ```
 
-```{r, fig.cap = 'Tasa de fecundidad por edad observada en una población de Huteritas y estimaciones para valores del MSE seleccionados aleatoriamente', fig.pos="H"}
+
+
+```{r, fig.cap = 'Gráfico de líneas de las tasas de fecundidad por edad observada en la población y estimaciones para valores del ECM seleccionados aleatoriamente.', fig.pos="H"}
 
 aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() + 
       geom_line(aes(x = age, y = value, colour = index))  +
@@ -255,9 +266,7 @@ aleat %>% pivot_longer(-age, names_to = 'index') %>% ggplot() +
 
 Ahora bien, para obtener una medida de la incertidumbre mencionada, se procedió a calcular los intervalos de credibilidad y la estimación de la mediana (percentil 0.5 de la estimación de la distribución predictiva posterior para cada edad).
 
-Con el fin de observar cómo varía la incertidumbre con respecto a la estimación puntual, se procedió a computar el MSE en cada combinación de  $\alpha$ y $\kappa$  seleccionando como candidatos de valores pertenecientes a la estimación de la distribución a posteriori aquellos que tienen error menor o igual al percentil que acumula un 10%, 50%, y 75% de la probabilidad de la distribución del error respectivamente.
-
-A continuación se presenta el gráfico con los resultados:
+Con el fin de observar cómo varía la incertidumbre con respecto a la estimación puntual, se procedió a computar el \textit{ECM} en cada combinación de  $\alpha$ y $\kappa$  seleccionando como candidatos de valores pertenecientes a la estimación de la distribución a posteriori aquellos que tienen error menor o igual al percentil que acumula un 10\%, 50\%, y 75\% de la probabilidad de la distribución del error respectivamente. En la figura 4 se presenta el gráfico con los resultados.
 
 
 ```{r datos}
@@ -299,7 +308,12 @@ datos$fx <- obs$fx
 ```
 
 
-```{r, fig.cap='Gráfico de líneas de la ASFR por edad, valores observados, mediana e intervalo de confianza al 95%. Se observa que la amplitud de los intervalos de confianza aumenta conforme se incrementa el valor de epsilon seleccionado y la edad de la madre.', fig.pos="H"}
+Gráfico de líneas de las \textit{ASFR}, valores observados, mediana
+e intervalo de confianza al 95\%. Se observa que la amplitud de los intervalos de
+confianza aumenta conforme se incrementa el valor de $\epsilon$ seleccionado y la
+edad de la madre.
+
+```{r, fig.cap='Gráfico de líneas de las ASFR, valores observados, mediana e intervalo de confianza al 95%. Se observa que la amplitud de los intervalos de confianza aumenta conforme se incrementa el valor de epsilon seleccionado y la edad de la madre.', fig.pos="H"}
 
 datostot <- bind_rows(datos %>% mutate(tipo = 'Sin filtrar'), datos2 %>% mutate(tipo = 'Percentil 0.1'),
                       datos3 %>% mutate(tipo = 'Percentil 0.5'), datos4 %>% mutate(tipo = 'Percentil 0.75'))
@@ -331,30 +345,37 @@ datostot %>% ggplot(aes(x=age))+
 
 # Conclusiones
 
+Si bien el modelo \textit{Comfert} nos permite obtener estimaciones para las tasas de fecundidad por edad, el enfoque bayesiano implementado (\textit{ABC Bayes}) nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundidad por edad. Esto último en función de la parametrización seleccionada.
 
-Si bien el modelo Comfert nos permite obtener estimaciones para las tasas de fecundidad por edad, el enfoque bayesiano implementado (*ABC Bayes*) nos permite observar y cuantificar la incertidumbre subyacente en el fenómeno de estudio, pudiendo observar la existencia de aleatoriedad en las tasas de fecundidad por edad. Esto último en función de la parametrización seleccionada.
+Si bien para valores elevados de $\epsilon$ el modelo parece lograr un ajuste satisfactorio en las edades avanzadas, se detecta un problema en todos los casos para edades tempranas. Una posible explicación está en que el modelo considera como parámetros la edad en la que decae la fecundidad y la tasa para dicha edad, sin considerar algún punto de inflexión para edades tempranas. Esto puede estar vinculado a los supuestos establecidos respecto a la edad de la unión (matrimonio), en particular a la modelización seleccionada para el tiempo de espera hasta el matrimonio.
 
-Como podemos observar, el modelo no presenta un ajuste adecuado en algunas edades, en particular para edades tempranas (menos de 20 años).
+Por otra parte, las estimaciones sobre la \textit{ASFR} dependen del valor de $\epsilon$ seleccionado. Para valores de $\epsilon$ pequeños (en particular percentil 10\%) existen valores observados que quedan por fuera del intervalo de credibilidad al 95\%.
 
-Si bien para valores elevados de épsilon el modelo parece lograr un ajuste satisfactorio en las edades avanzadas, el problema persiste en todos los casos para las edades tempranas. Una posible explicación está en que el modelo considera como parámetros la edad en la que decae la fecundidad y la tasa para dicha edad, sin considerar algún punto de inflexión para edades tempranas. Esto puede estar vinculado al supuesto de que la concepción comienza a partir del matrimonio o también a la modelización seleccionada para el tiempo de espera.
-
-Por otra parte, las estimaciones sobre la ASFR dependen del valor de épsilon seleccionado. Para valores de épsilon pequeños (en particular percentil 10%) existen valores observados que quedan por fuera del intervalo de credibilidad al 95%.
-
-
+De esta manera, el modelo implementado no solamente nos pérmite observar y cuantificar la aleatoriedad en las tasas de fecundidad por edad, sino también que la incertidumbre aumenta significativamente cuanto mayor es el nivel de tolerancia utilizado.
 
 # Futuros trabajos
 
 Para futuras investigaciones se considera de interés incorporar al modelo la salida de unidades por fallecimiento y los fenómenos asociados a las migraciones.
 
-Adicionalmente, como extensión del modelo a poblaciones más avanzadas en la transición demográfica incluir una parametrización que considere la aleatoriedad proveniente de la utilización de métodos anticonceptivos y de la planificación o no del embarazo.
+Adicionalmente, como extensión del modelo a poblaciones más avanzadas en la
+transición demográfica incluir una parametrización que considere la aleatoriedad
+proveniente de la utilización de métodos anticonceptivos y de la planificación o
+no del embarazo. Es decir, poblaciones bajo un régimen de fecundidad regulada.
 
-En lo que respecta a la metodología utilizada, existen por lo menos dos formas de mejorar el enfoque utilizado. 
+En lo que respecta a la metodología utilizada, existen por lo menos dos formas
+de mejorar el enfoque utilizado.
 
-En primer lugar, con respecto al elevado costo computacional inherente al modelo uno de los algoritmos más utilizados para reducirlo es el algoritmo denominado *ABC regression adjustment* (Beaumont et al., 2002). La idea principal de dicho algoritmo es correr un ABC estándar y considerar un margen de error amplio con el fin de ajustar la muestra obtenida mediante una regresión. 
+En primer lugar, con respecto al elevado costo computacional inherente al modelo
+uno de los algoritmos más utilizados para reducirlo es el algoritmo denominado
+ABC regression adjustment (Beaumont et al., 2002). La idea principal
+de dicho algoritmo es correr un ABC estándar y considerar un margen de error
+amplio con el fin de ajustar la muestra obtenida mediante una regresión. 
 
-En segundo lugar, la obtención de los candidatos para la distribución a posteriori en función de una indicatriz implica una pérdida de información. Esto en el sentido que no permite cuantificar la distancia relativa entre el punto observado y simulado. Como posible alternativa se considera apropiado sustituir la función indicatriz por una función kernel.
-
-
+En segundo lugar, la obtención de los candidatos para la distribución a posteriori
+en función de una indicatriz implica una pérdida de información. Esto en el
+sentido que no permite cuantificar la distancia relativa entre el punto observado
+y simulado. Como posible alternativa se considera apropiado sustituir la función
+indicatriz por una función kernel.
 
 # Biblografía
  
