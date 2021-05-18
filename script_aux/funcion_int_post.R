@@ -24,8 +24,8 @@ int_post <- function(e=2){
                        paste0("ne_", ne),
                        paste0("N_", N))
   
-  post_candidates <- readRDS(file.path("Materiales",
-                                       res_dir, "evals", "evalued_points.rds")) %>% 
+  post_candidates <- readr::read_rds(here(file.path("Materiales",
+                                       res_dir, "evals"), "evalued_points.rds")) %>% 
     data.table()
   
   # Agregamos id para mapear
@@ -43,9 +43,9 @@ int_post <- function(e=2){
   
   for (i in 1:nrow(accepted)){
     
-    ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100,"/fx.Rdata") 
+    ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100)
     
-    y_pred <- read_rds(ruta) %>% data.table()
+    y_pred <- read_rds(here(ruta,"fx.Rdata")) %>% data.table()
     
     colnames(y_pred) <- c("age",paste0("fx_",i+100))
     

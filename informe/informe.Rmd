@@ -12,7 +12,7 @@ header-includes:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE, comment = FALSE)
+knitr::opts_chunk$set(echo = FALSE, cache = FALSE, message = FALSE, warning = FALSE, comment = FALSE)
 library(magrittr)
 library(data.table)
 library(tidyverse)
@@ -161,7 +161,7 @@ opt_res_dir <- file.path(res_dir, paste0("param_set_", n0+paramset))
 
 #lee las simulaciones obtenidas con las combinaciones de kappa y alpha que minimizan el error
 #SON LOS VALORES SIMULADOS DE LA ASFR CON KAPPA Y ALPHA OPTIMOS (QUE MINIMIZAN EL MSE)
-sim <- readRDS(file.path(opt_res_dir, "fx.RData"))
+sim <- readr::read_rds(here(file.path(opt_res_dir), "fx.RData"))
 sim <- as_tibble(sim)
 
 # plot obs vs. sim de combinacion con menor distancia
@@ -207,8 +207,8 @@ accepted <- post_candidates2[post_candidates2$mse < epsilon,]
 # Loop para cargar datos de carpetas
 
 for (i in 1:nrow(accepted)){
-  ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100,"/fx.Rdata") 
-  y_pred <- read_rds(ruta) %>% data.table()
+  ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",accepted$id[i]+100) 
+  y_pred <- read_rds(here(ruta,'fx.Rdata')) %>% data.table()
   colnames(y_pred) <- c("age",paste0("fx_",i+100))
   setkey(y_pred,age)
   setkey(edad2,age)
@@ -267,12 +267,18 @@ colnames(edad) <- "age"
 
 # Loop para cargar datos de carpetas
 for (i in 1:520){
-      ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",i+100,"/fx.Rdata") 
-      y_pred <- read_rds(ruta) %>% data.table()
-      colnames(y_pred) <- c("age",paste0("fx_",i+100))
-      setkey(y_pred,age)
-      setkey(edad,age)
-      edad <- edad[y_pred,nomatch=0]
+      
+  ruta <- paste0("Materiales/resultados/ini_c_2000/ne_10/N_520/param_set_",i+100)
+      
+  y_pred <- read_rds(here(ruta,"fx.Rdata")) %>% data.table()
+      
+  colnames(y_pred) <- c("age",paste0("fx_",i+100))
+      
+  setkey(y_pred,age)
+      
+  setkey(edad,age)
+      
+  edad <- edad[y_pred,nomatch=0]
 }
 
 quantiles <- apply(edad[,-1],1,function(y){
